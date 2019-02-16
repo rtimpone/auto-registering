@@ -1,5 +1,5 @@
 //
-//  CustomTableViewCell.swift
+//  CustomHeaderView.swift
 //  AutoRegisteringDemo
 //
 //  Created by Rob Timpone on 2/16/19.
@@ -8,8 +8,8 @@
 
 import UIKit
 
-class CustomTableViewCell: UITableViewCell {
+class CustomHeaderView: UITableViewHeaderFooterView {
     
-    @IBOutlet weak var customLabel: UILabel!
+    @IBOutlet weak var label: UILabel!
     
 }

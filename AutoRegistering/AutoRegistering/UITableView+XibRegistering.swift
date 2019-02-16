@@ -8,54 +8,87 @@
 
 import UIKit
 
+enum RegistrationType {
+    case cell
+    case header
+}
+
 protocol XibRegistering {
-    
-    func hasRegisteredType<T: XibBased>(_ type: T.Type) -> Bool
-    func registerType<T: XibBased>(_ type: T.Type)
+    func hasRegisteredType<T: XibBased>(_ type: T.Type, as registrationType: RegistrationType) -> Bool
+    func registerType<T: XibBased>(_ type: T.Type, as registrationType: RegistrationType)
 }
 
 extension UITableView: XibRegistering {
     
-    func hasRegisteredType<T: XibBased>(_ type: T.Type) -> Bool {
+    func hasRegisteredType<T: XibBased>(_ type: T.Type, as registrationType: RegistrationType) -> Bool {
         guard let registeredCells = registeredCells else {
             return false
         }
         return registeredCells.contains(type.xibName)
     }
     
-    func registerType<T: XibBased>(_ type: T.Type) {
+    func registerType<T: XibBased>(_ type: T.Type, as registrationType: RegistrationType) {
         
         let xibName = type.xibName
         let bundle = Bundle(for: type)
         let nib = UINib(nibName: xibName, bundle: bundle)
-        register(nib, forCellReuseIdentifier: xibName)
         
+        switch registrationType {
+        case .cell:
+            register(nib, forCellReuseIdentifier: xibName)
+            registerCell(withIdentifier: xibName)
+        case .header:
+            register(nib, forHeaderFooterViewReuseIdentifier: xibName)
+            registerHeader(withIdentifier: xibName)
+        }
+    }
+    
+    func registerCell(withIdentifier identifier: String) {
         if registeredCells == nil {
             registeredCells = Set<String>()
         }
-        registeredCells?.insert(type.xibName)
+        registeredCells?.insert(identifier)
+    }
+    
+    func registerHeader(withIdentifier identifier: String) {
+        if registeredHeaders == nil {
+            registeredHeaders = Set<String>()
+        }
+        registeredHeaders?.insert(identifier)
     }
 }
 
-extension UITableViewCell: XibBased {
+extension UIView: XibBased {
     
-    // make all table view cells xib based by default
+    // make all views xib based by default
 }
 
 private extension UITableView {
     
     struct AssociatedKeys {
-        static var registeredNibBasedCells = "kRegisteredNibBasedCells"
+        static var registeredCells = "kRegisteredCells"
+        static var registeredHeaders = "kRegisteredHeaders"
     }
     
     //this allows us to add a stored property of type Set<String> to all UITableViews via an extension
     var registeredCells: Set<String>? {
         get {
-            return objc_getAssociatedObject(self, &AssociatedKeys.registeredNibBasedCells) as? Set<String>
+            return objc_getAssociatedObject(self, &AssociatedKeys.registeredCells) as? Set<String>
         }
         set {
             if let newValue = newValue {
-                objc_setAssociatedObject(self, &AssociatedKeys.registeredNibBasedCells, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                objc_setAssociatedObject(self, &AssociatedKeys.registeredCells, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            }
+        }
+    }
+    
+    var registeredHeaders: Set<String>? {
+        get {
+            return objc_getAssociatedObject(self, &AssociatedKeys.registeredHeaders) as? Set<String>
+        }
+        set {
+            if let newValue = newValue {
+                objc_setAssociatedObject(self, &AssociatedKeys.registeredHeaders, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             }
         }
     }
@@ -63,10 +96,28 @@ private extension UITableView {
 
 public extension UITableView {
     
+    public func dequeueReusableHeader<T: UIView>(ofType type: T.Type) -> T {
+        
+        if !hasRegisteredType(type, as: .header) {
+            registerType(type, as: .header)
+        }
+        
+        let identifier = type.xibName
+        guard let view = dequeueReusableHeaderFooterView(withIdentifier: identifier) else {
+            fatalError("Unable to dequeue reusable header with identifier '\(identifier)'")
+        }
+        
+        guard let typedView = view as? T else {
+            fatalError("Header view that was dequeued for identifier '\(identifier)' could not be casted to type '\(String(describing: type))'")
+        }
+        
+        return typedView
+    }
+    
     public func dequeueReusableCell<T: UITableViewCell>(ofType type: T.Type) -> T {
         
-        if !hasRegisteredType(type) {
-            registerType(type)
+        if !hasRegisteredType(type, as: .cell) {
+            registerType(type, as: .cell)
         }
         
         let identifier = type.xibName
