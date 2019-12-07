@@ -96,7 +96,7 @@ private extension UITableView {
 
 public extension UITableView {
     
-    public func dequeueReusableHeader<T: UIView>(ofType type: T.Type) -> T {
+    func dequeueReusableHeader<T: UIView>(ofType type: T.Type) -> T {
         
         if !hasRegisteredType(type, as: .header) {
             registerType(type, as: .header)
@@ -114,7 +114,7 @@ public extension UITableView {
         return typedView
     }
     
-    public func dequeueReusableCell<T: UITableViewCell>(ofType type: T.Type) -> T {
+    func dequeueReusableCell<T: UITableViewCell>(ofType type: T.Type) -> T {
         
         if !hasRegisteredType(type, as: .cell) {
             registerType(type, as: .cell)
